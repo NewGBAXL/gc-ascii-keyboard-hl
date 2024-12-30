@@ -28,4 +28,10 @@ int GCKB_Init(int chan);
  */
 int GCKB_ReadKeys(int chan, u8 *pressedKeys);
 
+/**
+ * Returns the character corresponding to the given key press, with the given shift state. If the key press is not
+ * recognized, or if the shift state is not valid, a null character is returned.
+ */
+char GCKB_GetMap(u8 key, int isShiftHeld);
+
 #endif

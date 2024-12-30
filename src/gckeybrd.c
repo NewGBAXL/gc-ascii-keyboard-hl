@@ -1,4 +1,5 @@
 #include <gccore.h>
+#include "gckeymap.h"
 
 #if defined(HW_DOL)
 #define SI_REG_BASE 0xCC006400
@@ -80,4 +81,24 @@ int GCKB_ReadKeys(int chan, u8 *pressedKeys) {
     }
 
     return 0;
+}
+
+char GCKB_GetMap(u8 key, int isShiftHeld) {
+    char map[] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+        'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+        '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', '\\', '@', '[', ';', ':', ']', ',', '.', '/', '\\' };
+    
+    char mapShift[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+		'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+		'!', '"','#','$','%','&','\'','(',')','~','=','|', '`','{', '+', '*', '}', '<', '>', '?', '_' };
+	
+    if (key == KEY_SPACE) {
+		return ' ';
+	}
+	else if (key >= KEY_A && key <= KEY_BACKSLASH) {
+		return isShiftHeld ? mapShift[key - KEY_A] : map[key - KEY_A];
+	}
+	else {
+		return '\t';
+	}
 }

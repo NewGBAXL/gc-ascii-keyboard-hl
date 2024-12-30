@@ -2,11 +2,14 @@
 #include <stdlib.h>
 #include <gccore.h>
 #include <debug.h>
+#include <string.h>
 
 #include "gckeybrd.h"
 
 static void *xfb = NULL;
 static GXRModeObj *rmode = NULL;
+
+//
 
 int main(int argc, char **argv) {
 
@@ -37,18 +40,39 @@ int main(int argc, char **argv) {
     printf("GC Keyboard located at chan %d\n", keyboardChan);
 
     int keyboardEnabled = GCKB_Init(keyboardChan);
-    if (keyboardEnabled)
+    if (keyboardEnabled) {
         printf("GC Keyboard initialized on chan %d\n", keyboardChan);
+
+    }
+
+	u8 keys[3] = { 0, 0, 0 };
+	u8 keysLast[3] = { 0, 0, 0 };
+
+    char output[256] = "";
 
     printf("Start of main loop.\nPress Start on the controller plugged into slot 1 to exit ...\n");
     while(1) {
         if (keyboardEnabled) {
-            u8 keys[3];
             if (GCKB_ReadKeys(keyboardChan, keys)) {
-                if (keys[0] | keys[1] | keys[2])
-                    printf("keys pressed: 0x%02x, 0x%02x, 0x%02x\n", keys[0], keys[1], keys[2]);
+                if (keys[0] | keys[1] | keys[2]) {
+                    //printf("keys pressed: 0x%02x, 0x%02x, 0x%02x\n", keys[0], keys[1], keys[2]);
+                }
+				int isShift = (keys[1] == KEY_LEFTSHIFT || keys[1] == KEY_RIGHTSHIFT
+                    || keys[2] == KEY_LEFTSHIFT || keys[2] == KEY_RIGHTSHIFT);
+				if (keys[0] && keys[0] != keysLast[0] && keys[0] != KEY_LEFTSHIFT && keys[0] != KEY_RIGHTSHIFT) { //deal with multiple key presses later
+					//add string to output
+                    //output += GCKB_GetMap(keys[0], isShift);
+                    size_t len = strlen(output);
+					output[len] = GCKB_GetMap(keys[0], isShift);
+					output[len + 1] = '\0';
+					printf("output: %s\n", output);
+				}
             }
         }
+
+		keysLast[0] = keys[0];
+		keysLast[1] = keys[1];
+		keysLast[2] = keys[2];
 
         PAD_ScanPads();
         u32 pressed = PAD_ButtonsDown(0);
