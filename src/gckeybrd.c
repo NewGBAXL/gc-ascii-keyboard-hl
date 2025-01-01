@@ -38,29 +38,6 @@ static void SI_AwaitPendingCommands(void) {
     while(*SICOMCSR & 0x1);
 }
 
-//DEPRECATED
-/*int GCKB_Detect(void) {
-    SI_AwaitPendingCommands();
-
-    u32 buf[2];
-    for (int i = 0; i < 4; ++i) {
-        SI_GetResponse(i, buf);
-        SI_SetCommand(i, 0x00400300);
-        SI_EnablePolling(PAD_ENABLEDMASK(i));
-    }
-    SI_AwaitPendingCommands();
-
-    int keyboardChan = -1;
-
-    for (int i = 0; i < 4; ++i) {
-        u32 type = SI_DecodeType(SI_GetType(i));
-        if (type == SI_GC_KEYBOARD)
-            keyboardChan = i;
-    }
-
-    return keyboardChan;
-}*/
-
 u32 GCKB_Init(void) {
     u32 chan;
     u32 buf[2];
@@ -93,6 +70,7 @@ u32 GCKB_ScanKybd(void) {
         SI_GetResponse(i, buf);
         SI_SetCommand(i, 0x00400300);
         SI_EnablePolling(PAD_ENABLEDMASK(i));
+		SI_TransferCommands();
     }
     SI_AwaitPendingCommands();
 
@@ -136,42 +114,14 @@ u32 GCKB_Read(KYBDStatus *status) {
 	return 1;
 }
 
-//DEPRECATED
-int GCKB_ReadKeys_OLD(int chan, u8* pressedKeys) {
-    if (chan == -1)
-        return 0;
-    if (!pressedKeys)
-        return 0;
-
-    u32 buffer[2];
-    if (SI_GetResponse(chan, buffer)) {
-        pressedKeys[0] = buffer[1] >> 24;
-        pressedKeys[1] = (buffer[1] >> 16) & 0xff;
-        pressedKeys[2] = (buffer[1] >> 8) & 0xff;
-        return 1;
-    } else {
-        pressedKeys[0] = 0;
-        pressedKeys[1] = 0;
-        pressedKeys[2] = 0;
-    }
-
-    return 0;
-}
-
 u32 GCKB_ReadKeys(int pad) {
-    u8 keys[3];
-    if (GCKB_ReadKeys_OLD(pad, keys)) {
-        //add and shift keys together
-        return keys[0] << 24 | (keys[1] << 16) | (keys[2] << 8);
-    }
-
     if (pad<PAD_CHAN0 || pad>PAD_CHAN3) return 0;
 
-	return 0;
-
-    /*u32 buffer[2];
-    SI_GetResponse(pad, buffer);
-	return buffer[1];*/
+	u32 buffer[2] = { 0, 0 };
+    if (SI_GetResponse(pad, buffer)) {
+        return (buffer[1] & 0xFFFFFF00) >> 8;
+    }
+    return 0;
 }
 
 char GCKB_GetMap(u8 key, int isShiftHeld) {

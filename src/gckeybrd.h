@@ -41,7 +41,6 @@ u32 GCKB_ScanPads(void);
  * specific keys, probably only 2 at a time). If too many keys are held down, all of the values returned will be 0x01
  * or 0x02. A value of 0x00 indicates no key press.
  */
-int GCKB_ReadKeys_OLD(int chan, u8* pressedKeys); //DEPRECATED
 u32 GCKB_ReadKeys(int chan);
 
 /**

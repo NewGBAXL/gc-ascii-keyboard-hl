@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
                 || key[2] == KEY_LEFTSHIFT || key[2] == KEY_RIGHTSHIFT);
 			char character = '\0';
 
-            if (key[0] && key[0] != keyLast[0]) && key[0] != keyLast[1]) {
+            if (key[0] && key[0] != keyLast[0] && key[0] != keyLast[1]) {
                 character = GCKB_GetMap(key[0], isShift);
             }
 			else if (key[1] && key[1] != keyLast[0] && key[1] != keyLast[1]) {
