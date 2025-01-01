@@ -9,8 +9,6 @@
 static void *xfb = NULL;
 static GXRModeObj *rmode = NULL;
 
-//
-
 int main(int argc, char **argv) {
 
     VIDEO_Init();
@@ -27,53 +25,82 @@ int main(int argc, char **argv) {
     VIDEO_WaitVSync();
     if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
 
-    printf("\n\nHello ...\n");
-
-    //DEBUG_Init(GDBSTUB_DEVICE_USB,1);
-    //printf("Waiting for debugger ...\n");
-    //_break();
-    //printf("debugger connected ...\n");
+    printf("\n\nGC Keyboard Example\n");
 
     PAD_Init();
 
-    int keyboardChan = GCKB_Detect();
-    printf("GC Keyboard located at chan %d\n", keyboardChan);
-
-    int keyboardEnabled = GCKB_Init(keyboardChan);
+    int keyboardChan = 0;
+    for (keyboardChan = 0; keyboardChan < 4; ++keyboardChan) {
+		if (SI_GetType(keyboardChan) == SI_GC_KEYBOARD) {
+            printf("GC Keyboard located at chan %d\n", keyboardChan);
+            break;
+		}
+	}
+	//Alternately you can use GCKB_ScanKybd() or GCKB_Read() to find the keyboard.
+	//GCKB_ScanKybd() also handles errors.
+    
+    int keyboardEnabled = GCKB_Init();
     if (keyboardEnabled) {
         printf("GC Keyboard initialized on chan %d\n", keyboardChan);
-
     }
 
-	u8 keys[3] = { 0, 0, 0 };
-	u8 keysLast[3] = { 0, 0, 0 };
-
+	//Keys are stored in a buffer of 3 bytes, one for each key.
+	//Because of this, more than 3 keys pressed at once will not be recognized.
+	u32 keys = 0;
+    u32 keysLast = 0;
+    u8* key = (u8*)&keys;
+	u8* keyLast = (u8*)&keysLast;
+	
     char output[256] = "";
 
     printf("Start of main loop.\nPress Start on the controller plugged into slot 1 to exit ...\n");
     while(1) {
         if (keyboardEnabled) {
-            if (GCKB_ReadKeys(keyboardChan, keys)) {
-                if (keys[0] | keys[1] | keys[2]) {
-                    //printf("keys pressed: 0x%02x, 0x%02x, 0x%02x\n", keys[0], keys[1], keys[2]);
-                }
-				int isShift = (keys[1] == KEY_LEFTSHIFT || keys[1] == KEY_RIGHTSHIFT
-                    || keys[2] == KEY_LEFTSHIFT || keys[2] == KEY_RIGHTSHIFT);
-				if (keys[0] && keys[0] != keysLast[0] && keys[0] != KEY_LEFTSHIFT && keys[0] != KEY_RIGHTSHIFT) { //deal with multiple key presses later
-					//add string to output
-                    //output += GCKB_GetMap(keys[0], isShift);
-                    size_t len = strlen(output);
-					output[len] = GCKB_GetMap(keys[0], isShift);
-					output[len + 1] = '\0';
-					printf("output: %s\n", output);
-				}
+			keys = GCKB_ReadKeys(keyboardChan);
+			if (keys == 0) {
+				continue;
+			}
+			//printf("keys pressed: 0x%02x, 0x%02x, 0x%02x\n", key[0], key[1], key[2]);
+                
+            //I believe that Shift keys can only be detected in keys[1] and keys[2],
+			//and similarly alphanumeric keys can only be detected in keys[0] and keys[1].
+			//Finally, keys[3] should not be accessed.
+            int isShift = (key[1] == KEY_LEFTSHIFT || key[1] == KEY_RIGHTSHIFT
+                || key[2] == KEY_LEFTSHIFT || key[2] == KEY_RIGHTSHIFT);
+			char character = '\0';
+
+            if (key[0] && key[0] != keyLast[0]) && key[0] != keyLast[1]) {
+                character = GCKB_GetMap(key[0], isShift);
             }
+			else if (key[1] && key[1] != keyLast[0] && key[1] != keyLast[1]) {
+				character = GCKB_GetMap(key[1], isShift);
+			}
+
+			if ((key[0] == KEY_BACKSPACE || key[1] == KEY_BACKSPACE || key[2] == KEY_BACKSPACE) &&
+				keyLast[0] != KEY_BACKSPACE && keyLast[1] != KEY_BACKSPACE && keyLast[2] != KEY_BACKSPACE) {
+                size_t len = strlen(output);
+                if (len > 0) {
+                    output[len - 1] = '\0';
+                }
+            }
+            else {
+                //Character to output. The good 'ol += in C.
+                size_t len = strlen(output);
+                if (character == '\0') {
+                    //printf("unrecognized key: 0x%02x\n", key[0]);
+                    continue;
+                }
+                output[len] = character;
+                output[len + 1] = '\0';
+            }
+
+            printf("output: %s\n", output);
         }
 
-		keysLast[0] = keys[0];
-		keysLast[1] = keys[1];
-		keysLast[2] = keys[2];
-
+		//Update last keys pressed so we can detect key release,
+		//and potentially check when a key is held down.
+		keysLast = keys;
+		
         PAD_ScanPads();
         u32 pressed = PAD_ButtonsDown(0);
         if (pressed)
